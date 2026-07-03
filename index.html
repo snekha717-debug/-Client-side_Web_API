@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Weather Dashboard</title>
+ <style>
+    /* --- Modern UI & Glassmorphism Theme --- */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+    :root {
+      /* Light Theme Variables */
+      --bg-gradient: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+      --text-color: #2c3e50;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --card-border: rgba(255, 255, 255, 0.5);
+      --primary-color: #4facfe;
+      --hover-color: #00f2fe;
+      --input-bg: rgba(255, 255, 255, 0.9);
+    }
+    
+    .dark-mode {
+      /* Dark Theme Variables */
+      --bg-gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      --text-color: #e0e0e0;
+      --card-bg: rgba(30, 30, 30, 0.65);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --primary-color: #bb86fc;
+      --hover-color: #9965f4;
+      --input-bg: rgba(50, 50, 50, 0.9);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      /* Smooth transition when toggling themes */
+      transition: background 0.6s ease, color 0.6s ease; 
+    }
+
+    .dashboard {
+      background: var(--card-bg);
+      /* The Frosted Glass Effect */
+      backdrop-filter: blur(16px); 
+      -webkit-backdrop-filter: blur(16px);
+      padding: 2.5rem;
+      border-radius: 24px;
+      border: 1px solid var(--card-border);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-weight: 800;
+      font-size: 1.8rem;
+      letter-spacing: -0.5px;
+      margin-bottom: 1.5rem;
+    }
+
+    .controls input, .controls select, .controls button {
+      padding: 14px 16px;
+      margin: 8px 0;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background: var(--input-bg);
+      color: var(--text-color);
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    /* Highlight inputs when the user clicks on them */
+    .controls input:focus, .controls select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 4px rgba(79, 172, 254, 0.2);
+    }
+
+    .controls button {
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    /* Button hover animations */
+    .controls button:hover {
+      background: var(--hover-color);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .controls button:active {
+      transform: translateY(0);
+    }
+
+    .flex-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .weather-display {
+      margin-top: 30px;
+      padding-top: 25px;
+      border-top: 1px solid var(--card-border);
+      /* Trigger a smooth fade-in when data loads */
+      animation: fadeIn 0.5s ease-out; 
+    }
+
+    .temperature {
+      font-size: 4rem;
+      font-weight: 800;
+      margin: 10px 0;
+      /* Gradient text for the temperature */
+      background: -webkit-linear-gradient(45deg, var(--primary-color), var(--hover-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.2;
+    }
+
+    .error {
+      color: #ff4c4c;
+      font-weight: 600;
+      background: rgba(255, 76, 76, 0.1);
+      padding: 12px;
+      border-radius: 10px;
+    }
+
+    /* Custom Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard">
+    <h2>Weather Dashboard</h2>
+    
+    <div class="controls">
+      <div class="flex-row">
+        <input type="text" id="cityInput" placeholder="Enter city name...">
+        <button id="searchBtn">Search</button>
+      </div>
+      
+      <button id="locationBtn">Use My Current Location</button>
+
+      <div class="flex-row">
+        <select id="unitSelect">
+          <option value="celsius">Celsius (°C)</option>
+          <option value="fahrenheit">Fahrenheit (°F)</option>
+        </select>
+        <button id="themeToggle">Toggle Theme</button>
+      </div>
+    </div>
+
+    <div id="weatherDisplay" class="weather-display">
+      <p>Initializing...</p>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. DOM Element Mapping ---
+    const cityInput = document.getElementById('cityInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const locationBtn = document.getElementById('locationBtn');
+    const unitSelect = document.getElementById('unitSelect');
+    const themeToggle = document.getElementById('themeToggle');
+    const weatherDisplay = document.getElementById('weatherDisplay');
+
+    // --- 2. Web Storage API (State Management) ---
+    // Retrieve saved data or set defaults
+    let savedLat = localStorage.getItem('lat') || '51.5074'; // Default: London
+    let savedLng = localStorage.getItem('lng') || '-0.1278';
+    let savedCity = localStorage.getItem('city') || 'London';
+    let currentUnit = localStorage.getItem('unit') || 'celsius';
+    let isDarkMode = localStorage.getItem('theme') === 'dark';
+
+    // Apply saved preferences on load
+    unitSelect.value = currentUnit;
+    if (isDarkMode) document.body.classList.add('dark-mode');
+
+    // Theme Toggle Interaction
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      const themeStatus = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+      localStorage.setItem('theme', themeStatus);
+    });
+
+    // Unit Change Interaction
+    unitSelect.addEventListener('change', (e) => {
+      currentUnit = e.target.value;
+      localStorage.setItem('unit', currentUnit);
+      fetchWeatherData(savedLat, savedLng, savedCity); // Re-fetch with new unit
+    });
+
+    // --- 3. Fetch API (Third-Party Integration) ---
+    async function fetchWeatherData(lat, lng, cityName) {
+      weatherDisplay.innerHTML = '<p>Loading weather data...</p>';
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m&temperature_unit=${currentUnit}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        
+        const temp = data.current.temperature_2m;
+        const wind = data.current.wind_speed_10m;
+        const tempUnitLabel = currentUnit === 'celsius' ? '°C' : '°F';
+
+        // Update DOM
+        weatherDisplay.innerHTML = `
+          <h3>${cityName}</h3>
+          <div class="temperature">${temp}${tempUnitLabel}</div>
+          <p>Wind Speed: ${wind} km/h</p>
+        `;
+
+        // Update Web Storage with the successful location
+        localStorage.setItem('lat', lat);
+        localStorage.setItem('lng', lng);
+        localStorage.setItem('city', cityName);
+        
+        // Update local variables
+        savedLat = lat; 
+        savedLng = lng; 
+        savedCity = cityName;
+
+      } catch (error) {
+        weatherDisplay.innerHTML = `<p class="error">Failed to fetch weather data.</p>`;
+        console.error(error);
+      }
+    }
+
+    // Geocoding API: Convert City String to Coordinates
+    searchBtn.addEventListener('click', async () => {
+      const city = cityInput.value.trim();
+      if (!city) return;
+      
+      weatherDisplay.innerHTML = '<p>Searching for location...</p>';
+      try {
+        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.results && data.results.length > 0) {
+          const { latitude, longitude, name } = data.results[0];
+          fetchWeatherData(latitude, longitude, name);
+        } else {
+          weatherDisplay.innerHTML = `<p class="error">City not found. Try another.</p>`;
+        }
+      } catch (error) {
+        weatherDisplay.innerHTML = `<p class="error">Error finding city.</p>`;
+      }
+    });
+
+    // --- 4. Geolocation API (User Interaction) ---
+    locationBtn.addEventListener('click', () => {
+      if ('geolocation' in navigator) {
+        weatherDisplay.innerHTML = '<p>Locating you...</p>';
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            fetchWeatherData(latitude, longitude, 'Your Location');
+          },
+          (error) => {
+            weatherDisplay.innerHTML = `<p class="error">Location access denied or unavailable.</p>`;
+          }
+        );
+      } else {
+        weatherDisplay.innerHTML = `<p class="error">Geolocation is not supported by your browser.</p>`;
+      }
+    });
+
+    // --- 5. Application Initialization ---
+    // Fetch weather for the last known (or default) location on page load
+    fetchWeatherData(savedLat, savedLng, savedCity);
+
+  </script>
+</body>
+</html>
